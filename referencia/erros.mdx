@@ -7,16 +7,18 @@ description: "Todos os erros da API seguem um formato consistente com código le
 
 ```json
 {
-  "error": "insufficient_balance",
-  "message": "Account balance too low to process live verification"
+  "error": {
+    "code": "insufficient_balance",
+    "message": "Saldo insuficiente em modo live."
+  }
 }
 ```
 
-O campo `error` é estável e pode ser usado em `switch`/`match`. O campo `message` é para debugging — pode mudar entre versões.
+O campo `error.code` é estável e pode ser usado em `switch`/`match`. O campo `error.message` é para debugging — pode mudar entre versões.
 
 ## Tabela de erros
 
-| HTTP | `error` | Quando ocorre |
+| HTTP | `error.code` | Quando ocorre |
 |---|---|---|
 | `400` | `missing_fields` | Body ausente ou campos obrigatórios faltando |
 | `400` | `invalid_action` | `action` inválido no OTP (não é `send` nem `check`) |
@@ -36,7 +38,7 @@ const res = await fetch(`${BASE}/verify/cpf`, { ... });
 const body = await res.json();
 
 if (!res.ok) {
-  switch (body.error) {
+  switch (body.error.code) {
     case "unauthorized":
     case "key_revoked":
       // Rever configuração da chave API
@@ -50,7 +52,7 @@ if (!res.ok) {
       break;
     default:
       // Log e alerta
-      console.error(body.error, body.message);
+      console.error(body.error.code, body.error.message);
   }
 }
 ```

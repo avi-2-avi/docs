@@ -1,0 +1,250 @@
+# Banana ID — Identity Verification API for Brazil
+
+Banana ID is a self-service identity validation API for the Brazilian market.
+Dashboard and signup: https://banana-id.lovable.app
+Full docs: https://docs.banana-id.lovable.app
+
+---
+
+## Authentication
+
+All requests require:
+```
+Authorization: Bearer <api_key>
+```
+
+Two key prefixes:
+- `bid_test_…` — sandbox mode, free, unlimited, deterministic fixtures, no real PII
+- `bid_live_…` — production mode, charges balance, never expose in frontend or public repos
+
+Keys are generated at https://banana-id.lovable.app/app/keys
+
+---
+
+## Base URL
+
+```
+https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1
+```
+
+---
+
+## Verification Object
+
+Every endpoint returns a verification object:
+
+```json
+{
+  "id": "ver_70464409",
+  "type": "cpf | otp | document | face",
+  "status": "processing | approved | review | rejected",
+  "confidence_score": null,
+  "reason": null,
+  "reason_group": null,
+  "created_at": "2026-06-20T17:35:50Z"
+}
+```
+
+- `confidence_score`: `0.0–1.0` for document and face; always `null` for cpf and otp
+- `reason`: specific rejection/review code (see full list below)
+- `reason_group`: `retry | review | block | fraud | null` — use this for branching logic
+
+Decision pattern:
+```js
+if (v.reason_group === "fraud")  { block(); return; }
+if (v.reason_group === "block")  { requestAlternative(); return; }
+if (v.reason_group === "review") { sendToQueue(v); return; }
+if (v.reason_group === "retry")  { askUserToRetry(); return; }
+// reason_group === null → approved
+```
+
+---
+
+## Block 1: CPF Lookup
+
+**Sync · R$ 0.12/verification**
+
+Checks whether the CPF exists, is active, and is not on fraud lists.
+
+```
+POST /verify/cpf
+Content-Type: application/json
+
+{ "cpf": "390.533.447-05" }
+```
+
+Accepts any format (`390.533.447-05` or `39053344705`) or a sandbox fixture string.
+
+Response: immediate (< 3s), `confidence_score` always null.
+
+Reasons:
+- `cpf_not_found` → `rejected` / `block`
+- `cpf_inactive` → `rejected` / `block`
+- `cpf_fraud_list` → `rejected` / `fraud`
+- `cpf_invalid_format` → `rejected` / `retry`
+
+---
+
+## Block 2: OTP via WhatsApp
+
+**Sync (2 steps) · R$ 0.08/verification · balance debited on check step only**
+
+### Step 1 — send code
+```
+POST /verify/otp
+{ "action": "send", "phone": "+5511999998888" }
+```
+Response `202`: returns `id`, status `processing`.
+
+### Step 2 — verify code
+```
+POST /verify/otp
+{ "action": "check", "id": "ver_77b0c5d9", "code": "123456" }
+```
+Response `200`: final result.
+
+Reasons:
+- `otp_wrong_code` → `rejected` / `retry`
+- `otp_expired` → `rejected` / `retry` (code expires after 5 min)
+- `otp_max_attempts` → `rejected` / `block` (> 3 attempts — request a new `send`)
+
+---
+
+## Block 3: Document (RG/CNH)
+
+**Async (polling) · R$ 0.80/verification · `confidence_score: 0.0–1.0`**
+
+### Step 1 — create verification
+```
+POST /verify/document
+{ "fixture": "test_doc_blurry" }   // sandbox only; omit in production
+```
+Response `202`: includes `upload_url` (expires ~10 min) and `upload_expires_at`.
+
+### Step 2 — upload file directly to Storage
+```
+PUT <upload_url>
+Content-Type: image/jpeg
+Body: <file binary>
+```
+File goes directly to a private bucket — never through your server.
+
+### Step 3 — poll until done
+```
+GET /verify/:id
+```
+Poll every ~2s. Result appears ~4s after upload. Final response includes `evidence_url` (signed URL, expires ~5 min) to view the document image.
+
+Reasons:
+- `doc_blurry` → `review` / `review`
+- `doc_glare` → `review` / `review`
+- `doc_expired` → `rejected` / `block`
+- `doc_unregistered` → `rejected` / `block`
+- `doc_photocopy` → `rejected` / `fraud`
+- `doc_tampered` → `rejected` / `fraud`
+
+---
+
+## Block 4: Face + Liveness
+
+**Async (polling) · R$ 1.10/verification · `confidence_score: 0.0–1.0`**
+
+Uses passive liveness — the provider analyzes the static selfie for spoofing signals (skin texture, screen reflection, paper edges). No video or user gesture needed.
+
+Same 3-step flow as Document, but:
+- Endpoint: `POST /verify/face`
+- File type: `image/jpeg` or `image/png` (selfie photo, NOT video)
+- Result ~4s after upload
+
+Reasons:
+- `face_low_quality` → `review` / `review`
+- `face_no_match` → `rejected` / `block` (face doesn't match the document)
+- `face_no_liveness` → `rejected` / `fraud`
+- `face_photo_of_photo` → `rejected` / `fraud`
+
+---
+
+## Polling helper (Node.js)
+
+```js
+async function pollUntilDone(id, { interval = 2000, timeout = 60000 } = {}) {
+  const BASE = "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1";
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const res = await fetch(`${BASE}/verify/${id}`, {
+      headers: { "Authorization": `Bearer ${KEY}` },
+    });
+    const data = await res.json();
+    if (data.status !== "processing") return data;
+    await new Promise(r => setTimeout(r, interval));
+  }
+  throw new Error("Polling timeout");
+}
+```
+
+---
+
+## HTTP Errors
+
+All errors follow this format:
+```json
+{ "error": { "code": "insufficient_balance", "message": "..." } }
+```
+
+| HTTP | `error.code` | When |
+|------|-------------|------|
+| 400 | `missing_fields` | Required fields missing |
+| 400 | `invalid_action` | OTP action is not `send` or `check` |
+| 401 | `unauthorized` | Missing or invalid Authorization header |
+| 401 | `key_revoked` | API key was revoked |
+| 402 | `insufficient_balance` | Not enough balance for live verification |
+| 404 | `not_found` | Verification ID not found or doesn't belong to account |
+| 429 | `rate_limited` | Rate limit exceeded — use exponential backoff |
+| 500 | `internal_error` | Unexpected error |
+
+**No error status ever charges balance.** Balance is debited only when a verification produces a final result (`approved` or `rejected`) in live mode.
+
+---
+
+## Sandbox Fixtures
+
+Use key `bid_test_sandbox0000000000000000` for all sandbox requests.
+
+### CPF fixtures (pass as `cpf` field)
+- any valid CPF (e.g. `390.533.447-05`) → `approved`
+- `test_cpf_inactive` → `rejected` / `cpf_inactive` / `block`
+- `test_cpf_not_found` → `rejected` / `cpf_not_found` / `block`
+- `test_cpf_fraud` → `rejected` / `cpf_fraud_list` / `fraud`
+
+### OTP fixtures (pass as `code` in check step)
+- `123456` → `approved`
+- `000000` → `rejected` / `otp_expired` / `retry`
+- anything else → `rejected` / `otp_wrong_code` / `retry`
+
+### Document fixtures (pass as `fixture` field in POST)
+- omitted or `test_doc_ok` → `approved` · score 0.94
+- `test_doc_blurry` → `review` · score 0.61
+- `test_doc_glare` → `review` · score 0.58
+- `test_doc_expired` → `rejected` / `block` · score 0.72
+- `test_doc_unregistered` → `rejected` / `block` · score 0.40
+- `test_doc_photocopy` → `rejected` / `fraud` · score 0.20
+- `test_doc_tampered` → `rejected` / `fraud` · score 0.15
+
+### Face fixtures (pass as `fixture` field in POST)
+- omitted or `test_face_match` → `approved` · score 0.94
+- `test_face_review` → `review` · score 0.58
+- `test_face_no_match` → `rejected` / `block` · score 0.31
+- `test_face_no_live` → `rejected` / `fraud` · score 0.12
+
+---
+
+## Typical KYC Flow
+
+```
+POST /verify/cpf        → approved?
+POST /verify/otp        → send code, check code → approved?
+POST /verify/document   → upload RG/CNH → poll → approved?
+POST /verify/face       → upload selfie → poll → approved?
+```
+
+Each block is independent and can be used standalone or combined.

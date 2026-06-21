@@ -22,14 +22,14 @@
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://app.banana-id.com"
+      "href": "https://banana-id.lovable.app"
     }
   },
   "navigation": {
     "pages": [
       {
         "group": "Início",
-        "pages": ["index", "quickstart", "autenticacao", "sandbox"]
+        "pages": ["index", "quickstart", "autenticacao", "sandbox", "uso-com-ia"]
       },
       {
         "group": "Blocos de validação",
@@ -54,7 +54,7 @@
       "anchors": [
         {
           "anchor": "Dashboard",
-          "href": "https://app.banana-id.com",
+          "href": "https://banana-id.lovable.app",
           "icon": "gauge"
         },
         {
