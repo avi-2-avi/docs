@@ -39,20 +39,20 @@ Decision pattern — always branch on reason_group, not on reason:
 
 ---
 
-BLOCK 1 — CPF lookup (sync, R$ 0.12)
+BLOCK 1 — CPF lookup (sync, R$ 0.25)
 POST /verify/cpf
 Body: { "cpf": "390.533.447-05" }  // any format, or sandbox fixture string
 Response: immediate (<3s)
 Reasons: cpf_not_found (block), cpf_inactive (block), cpf_fraud_list (fraud), cpf_invalid_format (retry)
 
-BLOCK 2 — OTP via WhatsApp (sync 2-step, R$ 0.08, charged on check only)
+BLOCK 2 — OTP via WhatsApp (sync 2-step, R$ 0.50, charged on check only)
 Step 1 → POST /verify/otp  { "action": "send", "phone": "+5511999998888" }
           → 202, returns id
 Step 2 → POST /verify/otp  { "action": "check", "id": "ver_xxx", "code": "123456" }
           → 200, final result
 Reasons: otp_wrong_code (retry), otp_expired (retry, 5 min TTL), otp_max_attempts (block, >3 attempts)
 
-BLOCK 3 — Document RG/CNH (async, R$ 0.80, confidence_score 0.0–1.0)
+BLOCK 3 — Document RG/CNH (async, R$ 0.90, confidence_score 0.0–1.0)
 Step 1 → POST /verify/document  { "fixture": "..." }   // sandbox only
           → 202, returns id + upload_url (expires ~10 min)
 Step 2 → PUT <upload_url>  Content-Type: image/jpeg  Body: <file>
@@ -61,7 +61,7 @@ Step 3 → GET /verify/:id  every 2s until status !== "processing"  (~4s after u
 Final response includes evidence_url (signed, expires ~5 min) for manual review display.
 Reasons: doc_blurry (review), doc_glare (review), doc_expired (block), doc_unregistered (block), doc_photocopy (fraud), doc_tampered (fraud)
 
-BLOCK 4 — Face + Liveness (async, R$ 1.10, confidence_score 0.0–1.0)
+BLOCK 4 — Face + Liveness (async, R$ 1.00, confidence_score 0.0–1.0)
 Same 3-step flow as Document. Endpoint: POST /verify/face
 File type: image/jpeg or image/png (selfie photo — passive liveness, NO video needed)
 ~4s after upload.
