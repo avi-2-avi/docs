@@ -1,0 +1,60 @@
+---
+title: "Erros HTTP"
+description: "Todos os erros da API seguem um formato consistente com código legível por máquina."
+---
+
+## Formato
+
+```json
+{
+  "error": "insufficient_balance",
+  "message": "Account balance too low to process live verification"
+}
+```
+
+O campo `error` é estável e pode ser usado em `switch`/`match`. O campo `message` é para debugging — pode mudar entre versões.
+
+## Tabela de erros
+
+| HTTP | `error` | Quando ocorre |
+|---|---|---|
+| `400` | `missing_fields` | Body ausente ou campos obrigatórios faltando |
+| `400` | `invalid_action` | `action` inválido no OTP (não é `send` nem `check`) |
+| `400` | `invalid_mode` | Modo de API key inválido (interno) |
+| `401` | `unauthorized` | Header `Authorization` ausente ou token inválido |
+| `401` | `key_revoked` | Chave API foi revogada |
+| `402` | `insufficient_balance` | Saldo insuficiente para verificação live |
+| `404` | `not_found` | ID de verificação não existe ou não pertence à conta |
+| `405` | `method_not_allowed` | Método HTTP errado para o endpoint |
+| `429` | `rate_limited` | Limite de requisições por minuto atingido |
+| `500` | `internal_error` | Erro inesperado — abra um ticket |
+
+## Handling recomendado
+
+```js
+const res = await fetch(`${BASE}/verify/cpf`, { ... });
+const body = await res.json();
+
+if (!res.ok) {
+  switch (body.error) {
+    case "unauthorized":
+    case "key_revoked":
+      // Rever configuração da chave API
+      break;
+    case "insufficient_balance":
+      // Redirecionar para top-up
+      break;
+    case "rate_limited":
+      // Backoff exponencial
+      await sleep(2 ** attempt * 1000);
+      break;
+    default:
+      // Log e alerta
+      console.error(body.error, body.message);
+  }
+}
+```
+
+## Erros que não cobram saldo
+
+Nenhum erro HTTP cobra saldo — o débito acontece apenas quando a verificação produz um resultado final (`approved` ou `rejected`) em modo `live`. Erros `4xx` e `5xx` nunca cobram.

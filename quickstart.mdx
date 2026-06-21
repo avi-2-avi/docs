@@ -1,47 +1,111 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "Do zero à primeira verificação em menos de 5 minutos."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+## 1. Crie sua conta
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+[Crie uma conta gratuita](https://app.banana-id.com/signup). Você cai direto no sandbox — grátis, ilimitado, sem cartão de crédito.
 
-## Prerequisites
+## 2. Pegue sua chave de teste
 
-Before you begin, you must have:
+No [Dashboard → Chaves de API](https://app.banana-id.com/keys), copie sua chave `bid_test_…`. Ela fica no header de todas as chamadas:
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+```
+Authorization: Bearer bid_test_sua_chave_aqui
+```
 
-## Get started
+## 3. Faça sua primeira verificação
 
-<Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
-
+<Tabs>
+  <Tab title="CPF (sync)">
     ```bash
-    npm install your-package
+    curl -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/cpf \
+      -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
+      -H "Content-Type: application/json" \
+      -d '{ "cpf": "390.533.447-05" }'
     ```
-  </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
-    ```
-  </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+    Resposta imediata:
 
-    ```bash
-    your-cli start
+    ```json
+    {
+      "id": "ver_70464409",
+      "type": "cpf",
+      "status": "approved",
+      "confidence_score": null,
+      "reason": null,
+      "reason_group": null,
+      "created_at": "2026-06-20T17:35:50Z"
+    }
     ```
-  </Step>
-</Steps>
+  </Tab>
+  <Tab title="Node.js">
+    ```js
+    const res = await fetch(
+      "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/cpf",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer bid_test_sandbox0000000000000000",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cpf: "390.533.447-05" }),
+      }
+    );
+    const verification = await res.json();
+    console.log(verification.status); // "approved"
+    ```
+  </Tab>
+</Tabs>
+
+## 4. Teste outros cenários
+
+Use fixtures para forçar qualquer resultado sem dados reais:
+
+```bash
+# CPF inativo
+curl ... -d '{ "cpf": "test_cpf_inactive" }'
+# → status: "rejected", reason: "cpf_inactive", reason_group: "block"
+
+# CPF em lista de fraude
+curl ... -d '{ "cpf": "test_cpf_fraud" }'
+# → status: "rejected", reason: "cpf_fraud_list", reason_group: "fraud"
+```
+
+Veja a lista completa de fixtures em [Sandbox e dados de teste](/sandbox).
+
+## 5. Lide com os três resultados
+
+```js
+if (verification.status === "approved") {
+  // prosseguir
+} else if (verification.status === "review") {
+  // enviar para fila de revisão manual
+  // reason_group === "review" → aguardar análise
+} else {
+  // status === "rejected"
+  if (verification.reason_group === "fraud") {
+    // bloquear, não reintentar
+  } else if (verification.reason_group === "retry") {
+    // pedir novo envio ao usuário
+  } else {
+    // reason_group === "block" → validação alternativa
+  }
+}
+```
 
 <Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
-
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+  Use `reason_group` para decidir o próximo passo — sem precisar interpretar o enum de `reason` completo. Veja a [tabela de reason_group](/referencia/reasons).
 </Tip>
+
+## Próximos passos
+
+<CardGroup cols={2}>
+  <Card title="Documento RG/CNH" icon="id-card" href="/blocos/documento">
+    Upload real + polling — async em ~4s.
+  </Card>
+  <Card title="Selfie + liveness" icon="camera" href="/blocos/face">
+    Biometria facial, async em ~6s.
+  </Card>
+</CardGroup>

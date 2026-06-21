@@ -1,38 +1,13 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Banana ID",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#E6A817",
+    "light": "#F0BB4A",
+    "dark": "#CE9512"
   },
   "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
@@ -40,33 +15,62 @@
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Suporte",
+        "href": "mailto:suporte@banana-id.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "href": "https://app.banana-id.com"
+    }
+  },
+  "navigation": {
+    "pages": [
+      {
+        "group": "Início",
+        "pages": ["index", "quickstart", "autenticacao", "sandbox"]
+      },
+      {
+        "group": "Blocos de validação",
+        "pages": [
+          "blocos/cpf",
+          "blocos/otp",
+          "blocos/documento",
+          "blocos/face"
+        ]
+      },
+      {
+        "group": "Referência",
+        "pages": [
+          "referencia/objeto-verificacao",
+          "referencia/reasons",
+          "referencia/erros",
+          "referencia/polling"
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Dashboard",
+          "href": "https://app.banana-id.com",
+          "icon": "gauge"
+        },
+        {
+          "anchor": "Status",
+          "href": "https://status.banana-id.com",
+          "icon": "signal"
+        }
+      ]
     }
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
+    "options": ["copy", "view", "claude", "cursor", "vscode", "mcp"]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/banana-id"
     }
   }
 }

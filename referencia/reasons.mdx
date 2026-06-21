@@ -1,0 +1,56 @@
+---
+title: "Reasons e reason_group"
+description: "Enum completo de códigos de resultado e sua classificação em grupos acionáveis."
+---
+
+## Como usar
+
+`reason_group` é o campo principal para decisões no seu código. `reason` dá o detalhe para logs e para exibir ao seu time de revisão.
+
+```js
+if (v.reason_group === "fraud")  { block(); return; }
+if (v.reason_group === "block")  { requestAlternative(); return; }
+if (v.reason_group === "review") { sendToQueue(v); return; }
+if (v.reason_group === "retry")  { askUserToRetry(); return; }
+```
+
+## CPF
+
+| `reason` | Significado | `status` | `reason_group` |
+|---|---|---|---|
+| `cpf_not_found` | CPF não existe na base | `rejected` | `block` |
+| `cpf_inactive` | CPF existe mas está irregular | `rejected` | `block` |
+| `cpf_fraud_list` | CPF em lista de fraude | `rejected` | `fraud` |
+| `cpf_invalid_format` | Formato inválido (erro de input) | `rejected` | `retry` |
+
+## OTP
+
+| `reason` | Significado | `status` | `reason_group` |
+|---|---|---|---|
+| `otp_wrong_code` | Código incorreto | `rejected` | `retry` |
+| `otp_expired` | Código expirado | `rejected` | `retry` |
+| `otp_max_attempts` | Mais de 3 tentativas | `rejected` | `block` |
+
+## Documento
+
+| `reason` | Significado | `status` | `reason_group` |
+|---|---|---|---|
+| `doc_blurry` | Imagem desfocada | `review` | `review` |
+| `doc_glare` | Reflexo / iluminação ruim | `review` | `review` |
+| `doc_expired` | Documento vencido | `rejected` | `block` |
+| `doc_unregistered` | Não confere com base gov. | `rejected` | `block` |
+| `doc_photocopy` | É fotocópia / foto de foto | `rejected` | `fraud` |
+| `doc_tampered` | Indícios de adulteração | `rejected` | `fraud` |
+
+## Face
+
+| `reason` | Significado | `status` | `reason_group` |
+|---|---|---|---|
+| `face_low_quality` | Iluminação / foco insuficiente | `review` | `review` |
+| `face_no_match` | Rosto não corresponde ao documento | `rejected` | `block` |
+| `face_no_liveness` | Não detectou pessoa viva (foto/tela) | `rejected` | `fraud` |
+| `face_photo_of_photo` | Foto de foto | `rejected` | `fraud` |
+
+## Por que um enum reduzido?
+
+O provedor que encapsulamos tem dezenas de códigos internos. Banana ID os mapeia para este conjunto estável e documentado — assim seu código não quebra quando o provedor muda sua nomenclatura interna.

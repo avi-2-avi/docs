@@ -1,0 +1,41 @@
+---
+title: "Autenticação"
+description: "API keys — como autenticar e a diferença entre teste e produção."
+---
+
+## API keys
+
+Todas as chamadas exigem o header:
+
+```
+Authorization: Bearer <sua_api_key>
+```
+
+As chaves são geradas no [Dashboard → Chaves de API](https://app.banana-id.com/keys).
+
+## Dois modos, uma conta
+
+O modo é decidido pela chave — não há um interruptor de conta.
+
+| Prefixo | Modo | Cobra saldo? | Chama provedor real? |
+|---|---|---|---|
+| `bid_test_…` | Sandbox | Nunca | Não — respostas deterministas por fixture |
+| `bid_live_…` | Produção | Sim, ao produzir resultado | Não em V1 — mock avançado |
+
+<Warning>
+  Nunca exponha uma chave `bid_live_` no frontend ou em repositórios públicos. Chaves de teste (`bid_test_`) são seguras para o sandbox — sem PII real, sem cobrança.
+</Warning>
+
+## Segurança
+
+- As chaves são armazenadas como hash SHA-256 — **nunca em claro**.
+- A chave completa é exibida **uma única vez** ao ser criada. Depois, só o prefixo mascarado (`bid_test_••••8f2a`) é visível.
+- Para revogar uma chave, vá em Dashboard → Chaves de API → Revogar. A revogação é imediata e irreversível.
+
+## Erros de autenticação
+
+```json
+{ "error": { "code": "invalid_api_key", "message": "API key inválida ou revogada." } }
+```
+
+HTTP `401` — chave ausente, inválida, ou revogada. Verifique o header `Authorization: Bearer …`.

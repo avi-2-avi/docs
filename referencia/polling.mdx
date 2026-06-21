@@ -1,0 +1,93 @@
+---
+title: "Padrão de polling"
+description: "Como implementar polling corretamente para verificações de documento e face."
+---
+
+## Por que polling?
+
+Documento e face exigem que o arquivo chegue ao Storage antes do processamento. O arquivo vai direto do browser/app do seu usuário para o Banana ID Storage — sem passar pelo seu servidor. O resultado fica pronto em ~4s (documento) ou ~6s (face) após o upload.
+
+## Fluxo completo
+
+```
+POST /verify/document → 202 { id, upload_url }
+      ↓
+PUT <upload_url>  (direto ao Storage, Content-Type correto)
+      ↓
+GET /verify/:id → 200 { status: "processing" }   ← repete
+      ↓
+GET /verify/:id → 200 { status: "approved" | "rejected" | "review" }   ← para
+```
+
+## Implementação
+
+```js
+async function pollUntilDone(id, { interval = 2000, timeout = 60000 } = {}) {
+  const BASE = process.env.BANANA_API_BASE;
+  const KEY  = process.env.BANANA_API_KEY;
+  const deadline = Date.now() + timeout;
+
+  while (Date.now() < deadline) {
+    const res = await fetch(`${BASE}/verify/${id}`, {
+      headers: { "Authorization": `Bearer ${KEY}` },
+    });
+
+    if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
+
+    const data = await res.json();
+    if (data.status !== "processing") return data;
+
+    await new Promise(r => setTimeout(r, interval));
+  }
+
+  throw new Error(`Timeout waiting for verification ${id}`);
+}
+```
+
+## Timing de referência
+
+| Bloco | Latência típica após upload |
+|---|---|
+| `document` | ~4s |
+| `face` | ~6s |
+
+## Boas práticas
+
+**Intervalo**: 2s é o recomendado. Menos que isso não acelera o resultado e aumenta desnecessariamente as requisições.
+
+**Timeout**: 60s é conservador e seguro. Se ultrapassar, exiba uma mensagem ao usuário e permita nova tentativa.
+
+**Expiração do upload_url**: o `upload_url` expira em ~10 minutos. Se o usuário demorar a tirar a foto, gere uma nova verificação.
+
+**evidence_url**: a URL assinada para visualizar o arquivo expira em ~5 minutos. Busque no `GET` mais recente (ela é regenerada a cada chamada) — não armazene em cache.
+
+## No frontend (React)
+
+```js
+const [result, setResult] = useState(null);
+
+useEffect(() => {
+  if (!verificationId) return;
+  let cancelled = false;
+
+  const poll = async () => {
+    while (!cancelled) {
+      const data = await fetch(`${BASE}/verify/${verificationId}`, {
+        headers: { Authorization: `Bearer ${KEY}` },
+      }).then(r => r.json());
+
+      if (data.status !== "processing") {
+        if (!cancelled) setResult(data);
+        return;
+      }
+
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  };
+
+  poll().catch(console.error);
+  return () => { cancelled = true; };
+}, [verificationId]);
+```
+
+O cleanup cancela o loop quando o componente desmonta — evita atualização de estado em componente desmontado.

@@ -1,0 +1,123 @@
+---
+title: "OTP WhatsApp"
+description: "Confirma a posse do número com um código enviado via WhatsApp. Sync, 2 passos, R$ 0,08."
+---
+
+<Info>
+  **Sync (2 passos) · WhatsApp · R$ 0,08 por verificação · `confidence_score: null`**
+</Info>
+
+## Endpoint
+
+```
+POST /v1/verify/otp
+```
+
+## Fluxo em 2 passos
+
+O OTP requer duas chamadas. **O saldo só é debitado no `check` que produz resultado.**
+
+### Passo 1 — enviar o código
+
+```json
+{ "action": "send", "phone": "+5511999998888" }
+```
+
+**Response `202`:**
+
+```json
+{
+  "id": "ver_77b0c5d9",
+  "type": "otp",
+  "status": "processing",
+  "confidence_score": null,
+  "reason": null,
+  "reason_group": null,
+  "created_at": "2026-06-20T14:29:00Z"
+}
+```
+
+Guarde o `id` — vai ser usado no passo 2.
+
+### Passo 2 — verificar o código
+
+```json
+{ "action": "check", "id": "ver_77b0c5d9", "code": "123456" }
+```
+
+**Response `200`:**
+
+```json
+{
+  "id": "ver_77b0c5d9",
+  "type": "otp",
+  "status": "approved",
+  "confidence_score": null,
+  "reason": null,
+  "reason_group": null,
+  "created_at": "2026-06-20T14:29:00Z"
+}
+```
+
+## Códigos de resultado
+
+| `reason` | Significado | `status` | `reason_group` |
+|---|---|---|---|
+| `null` | Código correto | `approved` | `null` |
+| `otp_wrong_code` | Código incorreto | `rejected` | `retry` |
+| `otp_expired` | Código expirado (5 min) | `rejected` | `retry` |
+| `otp_max_attempts` | Mais de 3 tentativas | `rejected` | `block` |
+
+<Note>
+  `reason_group: retry` significa que o usuário pode tentar de novo. `block` significa que o número foi bloqueado por excesso de tentativas — peça um novo `send`.
+</Note>
+
+## Exemplo completo
+
+<Tabs>
+  <Tab title="curl">
+    ```bash
+    # Passo 1
+    RESP=$(curl -s -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/otp \
+      -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
+      -H "Content-Type: application/json" \
+      -d '{ "action": "send", "phone": "+5511999998888" }')
+    ID=$(echo $RESP | jq -r .id)
+
+    # Passo 2
+    curl -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/otp \
+      -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
+      -H "Content-Type: application/json" \
+      -d "{ \"action\": \"check\", \"id\": \"$ID\", \"code\": \"123456\" }"
+    ```
+  </Tab>
+  <Tab title="Node.js">
+    ```js
+    const BASE = "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1";
+    const headers = {
+      "Authorization": "Bearer bid_test_sandbox0000000000000000",
+      "Content-Type": "application/json",
+    };
+
+    // Passo 1
+    const send = await fetch(`${BASE}/verify/otp`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action: "send", phone: "+5511999998888" }),
+    }).then(r => r.json());
+
+    // Passo 2 (após o usuário digitar o código)
+    const check = await fetch(`${BASE}/verify/otp`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action: "check", id: send.id, code: userCode }),
+    }).then(r => r.json());
+
+    console.log(check.status); // "approved" ou "rejected"
+    ```
+  </Tab>
+</Tabs>
+
+## Quando usar
+
+Cadastro ou ação de risco médio (troca de dispositivo, alteração de senha). Fricção muito baixa — o usuário já tem WhatsApp.

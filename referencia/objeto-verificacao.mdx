@@ -1,0 +1,75 @@
+---
+title: "Objeto de verificação"
+description: "O shape canônico que todos os blocos devolvem — mesmo formato, mesma semântica."
+---
+
+Todos os endpoints devolvem o mesmo objeto:
+
+```json
+{
+  "id": "ver_8f2a1c9b",
+  "type": "face",
+  "status": "review",
+  "confidence_score": 0.61,
+  "reason": "doc_blurry",
+  "reason_group": "review",
+  "created_at": "2026-06-18T14:32:07Z"
+}
+```
+
+## Campos
+
+### `id`
+
+String com prefixo `ver_` + 8 hex. Identificador único da verificação. Use para polling (`GET /v1/verify/:id`) e para exibir no dashboard.
+
+### `type`
+
+`cpf` | `otp` | `document` | `face`
+
+### `status`
+
+| Valor | Significado | Label PT-BR |
+|---|---|---|
+| `approved` | Confirmado | Aprovado |
+| `rejected` | Negado de forma conclusiva | Recusado |
+| `review` | Não conclusivo — decisão manual | Em revisão |
+| `processing` | Aguardando upload ou processamento (transitório) | Processando |
+
+`processing` não é um status final — continue o polling.
+
+### `confidence_score`
+
+- **`document` / `face`**: `0.0–1.0`. Score do provedor (autenticidade documental, similaridade facial). Use para ajustar o limiar de aprovação automática nas Configurações.
+- **`cpf` / `otp`**: sempre `null`. São determinísticos — um score aqui seria falsa precisão.
+
+### `reason`
+
+`null` quando `approved`. Caso contrário, um código do [enum de reasons](/referencia/reasons). Estável e documentado — pode ser exibido ao seu time de revisão.
+
+### `reason_group`
+
+`null` quando `approved`. Classifica o `reason` em uma de quatro ações:
+
+| `reason_group` | Ação típica |
+|---|---|
+| `retry` | Pedir novo envio ao usuário |
+| `review` | Enviar para fila de revisão manual |
+| `block` | Bloquear ou pedir validação alternativa |
+| `fraud` | Bloquear e não reintentar |
+
+Use `reason_group` para decidir o próximo passo no seu código — sem precisar mapear o enum de `reason` completo.
+
+### `created_at`
+
+ISO 8601 UTC.
+
+## Campos extras (async)
+
+Presentes apenas em verificações de documento e face, após upload:
+
+| Campo | Quando | Descrição |
+|---|---|---|
+| `upload_url` | Na resposta do POST | URL assinada (PUT, ~10 min) para enviar o arquivo |
+| `upload_expires_at` | Na resposta do POST | Expiração do `upload_url` |
+| `evidence_url` | No GET após upload | URL assinada (GET, ~5 min) para ver o arquivo na Fila de revisão |

@@ -1,0 +1,100 @@
+---
+title: "Selfie + liveness"
+description: "Compara o rosto da selfie com o documento e confirma pessoa viva. Async com upload, ~6s."
+---
+
+<Info>
+  **Async (polling) · Câmera · R$ 1,10 por verificação · `confidence_score: 0.0–1.0`**
+</Info>
+
+## Endpoint
+
+```
+POST /v1/verify/face
+GET  /v1/verify/:id
+```
+
+## Fluxo em 3 passos
+
+Idêntico ao [Documento](/blocos/documento) — a diferença é o arquivo (vídeo `.mp4`) e a latência (~6s).
+
+### Passo 1 — criar a verificação
+
+```bash
+curl -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/face \
+  -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
+  -H "Content-Type: application/json" \
+  -d '{ "fixture": "test_face_match" }'
+```
+
+**Response `202`** — inclui `upload_url` e `upload_expires_at`.
+
+### Passo 2 — enviar o vídeo direto ao Storage
+
+```bash
+curl -X PUT "<upload_url>" \
+  -H "Content-Type: video/mp4" \
+  --data-binary @selfie.mp4
+```
+
+### Passo 3 — polling até o resultado
+
+```bash
+curl https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/ver_8f2a1c9b \
+  -H "Authorization: Bearer bid_test_sandbox0000000000000000"
+```
+
+Resultado em ~6s após o upload. Response final inclui `evidence_url` (thumbnail do vídeo para a Fila de revisão).
+
+## Códigos de resultado
+
+| `reason` | Significado | `status` | `reason_group` |
+|---|---|---|---|
+| `null` | Match facial + liveness confirmados | `approved` | `null` |
+| `face_low_quality` | Iluminação / foco insuficiente | `review` | `review` |
+| `face_no_match` | Rosto não corresponde ao documento | `rejected` | `block` |
+| `face_no_liveness` | Não detectou pessoa viva (foto/tela) | `rejected` | `fraud` |
+| `face_photo_of_photo` | Foto de foto | `rejected` | `fraud` |
+
+<Warning>
+  `face_no_liveness` e `face_photo_of_photo` têm `reason_group: fraud` — não retentar automaticamente. Escale para revisão ou bloqueie.
+</Warning>
+
+## Exemplo Node.js completo
+
+```js
+const BASE = "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1";
+const KEY  = "bid_test_sandbox0000000000000000";
+
+// 1. Criar
+const { id, upload_url } = await fetch(`${BASE}/verify/face`, {
+  method: "POST",
+  headers: { "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json" },
+  body: JSON.stringify({ fixture: "test_face_no_live" }),
+}).then(r => r.json());
+
+// 2. Upload do vídeo
+await fetch(upload_url, {
+  method: "PUT",
+  headers: { "Content-Type": "video/mp4" },
+  body: videoBuffer,
+});
+
+// 3. Polling
+let result;
+while (true) {
+  result = await fetch(`${BASE}/verify/${id}`, {
+    headers: { "Authorization": `Bearer ${KEY}` },
+  }).then(r => r.json());
+  if (result.status !== "processing") break;
+  await new Promise(r => setTimeout(r, 2000));
+}
+
+// result.status       === "rejected"
+// result.reason       === "face_no_liveness"
+// result.reason_group === "fraud"
+```
+
+## Quando usar
+
+Onboarding de alto risco, troca de dispositivo, recuperação de conta. Combinar com [Documento](/blocos/documento) para o fluxo completo de KYC.

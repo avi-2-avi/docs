@@ -1,0 +1,86 @@
+---
+title: "Consulta de CPF"
+description: "Verifica se o CPF existe, está ativo e não consta em listas de fraude. Sync, resposta em <3s."
+---
+
+<Info>
+  **Sync · Receita Federal · R$ 0,12 por verificação · `confidence_score: null`**
+</Info>
+
+## Endpoint
+
+```
+POST /v1/verify/cpf
+```
+
+## Request
+
+```json
+{ "cpf": "390.533.447-05" }
+```
+
+O campo `cpf` aceita qualquer formato (`390.533.447-05`, `39053344705`) ou um [fixture de teste](/sandbox#cpf).
+
+## Response
+
+```json
+{
+  "id": "ver_70464409",
+  "type": "cpf",
+  "status": "approved",
+  "confidence_score": null,
+  "reason": null,
+  "reason_group": null,
+  "created_at": "2026-06-20T17:35:50Z"
+}
+```
+
+<Note>
+  CPF é determinístico — o provedor responde sim/não. Por isso `confidence_score` é sempre `null`. Um número aqui seria falsa precisão.
+</Note>
+
+## Códigos de resultado
+
+| `reason` | Significado | `status` | `reason_group` |
+|---|---|---|---|
+| `null` | CPF válido e ativo | `approved` | `null` |
+| `cpf_not_found` | CPF não existe na base | `rejected` | `block` |
+| `cpf_inactive` | CPF existe mas está irregular | `rejected` | `block` |
+| `cpf_fraud_list` | CPF em lista de fraude | `rejected` | `fraud` |
+| `cpf_invalid_format` | Formato inválido | `rejected` | `retry` |
+
+## Exemplo completo
+
+<Tabs>
+  <Tab title="curl">
+    ```bash
+    curl -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/cpf \
+      -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
+      -H "Content-Type: application/json" \
+      -d '{ "cpf": "test_cpf_inactive" }'
+    ```
+  </Tab>
+  <Tab title="Node.js">
+    ```js
+    const res = await fetch(
+      "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/cpf",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer bid_test_sandbox0000000000000000",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cpf: "test_cpf_inactive" }),
+      }
+    );
+    const v = await res.json();
+    // v.status === "rejected"
+    // v.reason === "cpf_inactive"
+    // v.reason_group === "block"
+    ```
+  </Tab>
+</Tabs>
+
+## Quando usar
+
+Primeiro filtro no cadastro — antes de qualquer outro bloco. Custo baixo, sem fricção para o usuário final.

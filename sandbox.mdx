@@ -1,0 +1,65 @@
+---
+title: "Sandbox e dados de teste"
+description: "Teste todos os cenários sem gastar saldo nem usar dados reais."
+---
+
+## Como funciona o sandbox
+
+Use uma chave `bid_test_…` e passe um **fixture** no campo de entrada. O fixture determina o resultado de forma determinista — sem análise real, sem PII, sem cobrança.
+
+Sem fixture → `approved` por padrão (caminho feliz).
+
+## Tabela de fixtures
+
+### CPF
+
+| Valor do campo `cpf` | Resultado |
+|---|---|
+| `390.533.447-05` (ou qualquer CPF válido) | `approved` |
+| `test_cpf_inactive` | `rejected` · `cpf_inactive` · `block` |
+| `test_cpf_not_found` | `rejected` · `cpf_not_found` · `block` |
+| `test_cpf_fraud` | `rejected` · `cpf_fraud_list` · `fraud` |
+
+### OTP
+
+| Código (`code`) | Resultado |
+|---|---|
+| `123456` | `approved` |
+| `000000` | `rejected` · `otp_expired` · `retry` |
+| qualquer outro | `rejected` · `otp_wrong_code` · `retry` |
+
+### Documento
+
+| Campo `fixture` | Resultado |
+|---|---|
+| `test_doc_ok` (ou omitido) | `approved` · score 0.94 |
+| `test_doc_blurry` | `review` · `doc_blurry` · `review` · score 0.61 |
+| `test_doc_glare` | `review` · `doc_glare` · `review` · score 0.58 |
+| `test_doc_expired` | `rejected` · `doc_expired` · `block` · score 0.72 |
+| `test_doc_unregistered` | `rejected` · `doc_unregistered` · `block` · score 0.40 |
+| `test_doc_photocopy` | `rejected` · `doc_photocopy` · `fraud` · score 0.20 |
+| `test_doc_tampered` | `rejected` · `doc_tampered` · `fraud` · score 0.15 |
+
+### Face
+
+| Campo `fixture` | Resultado |
+|---|---|
+| `test_face_match` (ou omitido) | `approved` · score 0.94 |
+| `test_face_review` | `review` · `face_low_quality` · `review` · score 0.58 |
+| `test_face_no_match` | `rejected` · `face_no_match` · `block` · score 0.31 |
+| `test_face_no_live` | `rejected` · `face_no_liveness` · `fraud` · score 0.12 |
+
+## Convenção por nome de arquivo
+
+Para os blocos async (documento/face), se não passar o campo `fixture`, o **nome do arquivo enviado** serve de fixture:
+
+```
+test_doc_blurry.jpg   → doc_blurry
+test_face_no_live.mp4 → face_no_liveness
+```
+
+## O arquivo é real, o veredicto é simulado
+
+Mesmo no sandbox, o arquivo que você envia vai para o Storage privado e aparece como evidência real na Fila de revisão (`evidence_url`). O que é simulado é o **veredicto** — que é determinado pelo fixture, não pelo conteúdo do pixel.
+
+Isso significa que você integra de verdade — autentica, faz upload, faz polling — e vê a evidência na fila. Só o resultado é previsível.
