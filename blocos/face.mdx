@@ -1,6 +1,6 @@
 ---
 title: "Selfie + liveness"
-description: "Compara o rosto da selfie com o documento e confirma pessoa viva. Async com upload, ~6s."
+description: "Compara o rosto da selfie com o documento e confirma pessoa viva (passive liveness). Async com upload, ~4s."
 ---
 
 <Info>
@@ -14,9 +14,15 @@ POST /v1/verify/face
 GET  /v1/verify/:id
 ```
 
+## Como funciona o liveness
+
+Banana ID usa **passive liveness** — o provedor analisa a foto estática buscando sinais de spoofing: textura de pele, reflexo de tela, bordas de papel, profundidade estimada. Nenhuma ação do usuário é necessária além de tirar a selfie.
+
+Isso significa que o arquivo enviado é uma **imagem** (`.jpg` ou `.png`), não um vídeo — menos fricção para o usuário final.
+
 ## Fluxo em 3 passos
 
-Idêntico ao [Documento](/blocos/documento) — a diferença é o arquivo (vídeo `.mp4`) e a latência (~6s).
+Idêntico ao [Documento](/blocos/documento) — a diferença é o tipo de arquivo (imagem `.jpg`) e que o provedor compara o rosto com o documento enviado anteriormente.
 
 ### Passo 1 — criar a verificação
 
@@ -29,12 +35,12 @@ curl -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/fac
 
 **Response `202`** — inclui `upload_url` e `upload_expires_at`.
 
-### Passo 2 — enviar o vídeo direto ao Storage
+### Passo 2 — enviar a selfie direto ao Storage
 
 ```bash
 curl -X PUT "<upload_url>" \
-  -H "Content-Type: video/mp4" \
-  --data-binary @selfie.mp4
+  -H "Content-Type: image/jpeg" \
+  --data-binary @selfie.jpg
 ```
 
 ### Passo 3 — polling até o resultado
@@ -44,7 +50,7 @@ curl https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/ver_8f2a1c9
   -H "Authorization: Bearer bid_test_sandbox0000000000000000"
 ```
 
-Resultado em ~6s após o upload. Response final inclui `evidence_url` (thumbnail do vídeo para a Fila de revisão).
+Resultado em ~4s após o upload. Response final inclui `evidence_url` (a selfie para revisão manual se necessário).
 
 ## Códigos de resultado
 
@@ -73,11 +79,11 @@ const { id, upload_url } = await fetch(`${BASE}/verify/face`, {
   body: JSON.stringify({ fixture: "test_face_no_live" }),
 }).then(r => r.json());
 
-// 2. Upload do vídeo
+// 2. Upload da selfie
 await fetch(upload_url, {
   method: "PUT",
-  headers: { "Content-Type": "video/mp4" },
-  body: videoBuffer,
+  headers: { "Content-Type": "image/jpeg" },
+  body: imageBuffer,
 });
 
 // 3. Polling

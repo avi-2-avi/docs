@@ -5,11 +5,11 @@ description: "Do zero à primeira verificação em menos de 5 minutos."
 
 ## 1. Crie sua conta
 
-[Crie uma conta gratuita](https://app.banana-id.com/signup). Você cai direto no sandbox — grátis, ilimitado, sem cartão de crédito.
+[Crie uma conta gratuita](https://banana-id.lovable.app/signup). Você cai direto no sandbox — grátis, ilimitado, sem cartão de crédito.
 
 ## 2. Pegue sua chave de teste
 
-No [Dashboard → Chaves de API](https://app.banana-id.com/keys), copie sua chave `bid_test_…`. Ela fica no header de todas as chamadas:
+No [Dashboard → Chaves de API](https://banana-id.lovable.app/app/keys), copie sua chave `bid_test_…`. Ela fica no header de todas as chamadas:
 
 ```
 Authorization: Bearer bid_test_sua_chave_aqui
@@ -106,6 +106,6 @@ if (verification.status === "approved") {
     Upload real + polling — async em ~4s.
   </Card>
   <Card title="Selfie + liveness" icon="camera" href="/blocos/face">
-    Biometria facial, async em ~6s.
+    Biometria facial (passive liveness), async em ~4s.
   </Card>
 </CardGroup>
