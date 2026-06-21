@@ -23,8 +23,10 @@ Keys are generated at https://banana-id.lovable.app/app/keys
 
 ## Base URL
 
+Obtain your Base URL from Dashboard → Settings → API. Store it as an environment variable:
+
 ```
-https://api.banana-id.com/v1
+BASE_URL=https://…   # copy from Dashboard → Settings → API
 ```
 
 ---
@@ -168,7 +170,7 @@ Reasons:
 
 ```js
 async function pollUntilDone(id, { interval = 2000, timeout = 60000 } = {}) {
-  const BASE = "https://api.banana-id.com/v1";
+  const BASE = process.env.BASE_URL; // Dashboard → Settings → API
   const start = Date.now();
   while (Date.now() - start < timeout) {
     const res = await fetch(`${BASE}/verify/${id}`, {

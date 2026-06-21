@@ -27,7 +27,7 @@ Idêntico ao [Documento](/blocos/documento) — a diferença é o tipo de arquiv
 ### Passo 1 — criar a verificação
 
 ```bash
-curl -X POST https://api.banana-id.com/v1/verify/face \
+curl -X POST $BASE_URL/verify/face \
   -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
   -H "Content-Type: application/json" \
   -d '{ "fixture": "test_face_match" }'
@@ -46,7 +46,7 @@ curl -X PUT "<upload_url>" \
 ### Passo 3 — polling até o resultado
 
 ```bash
-curl https://api.banana-id.com/v1/verify/ver_8f2a1c9b \
+curl $BASE_URL/verify/ver_8f2a1c9b \
   -H "Authorization: Bearer bid_test_sandbox0000000000000000"
 ```
 
@@ -69,7 +69,7 @@ Resultado em ~4s após o upload. Response final inclui `evidence_url` (a selfie 
 ## Exemplo Node.js completo
 
 ```js
-const BASE = "https://api.banana-id.com/v1";
+const BASE = process.env.BASE_URL; // Dashboard → Configurações → API
 const KEY  = "bid_test_sandbox0000000000000000";
 
 // 1. Criar

@@ -3,6 +3,18 @@ title: "Autenticação"
 description: "API keys — como autenticar e a diferença entre teste e produção."
 ---
 
+## Base URL
+
+Cada conta tem sua própria Base URL — disponível em [Dashboard → Configurações → API](https://banana-id.lovable.app/app/settings).
+
+Guarde-a como variável de ambiente:
+
+```bash
+BASE_URL=https://…  # copie do Dashboard → Configurações → API
+```
+
+Todos os exemplos nesta documentação usam `$BASE_URL` como prefixo.
+
 ## API keys
 
 Todas as chamadas exigem o header:

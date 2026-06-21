@@ -78,14 +78,14 @@ Guarde o `id` — vai ser usado no passo 2.
   <Tab title="curl">
     ```bash
     # Passo 1
-    RESP=$(curl -s -X POST https://api.banana-id.com/v1/verify/otp \
+    RESP=$(curl -s -X POST $BASE_URL/verify/otp \
       -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
       -H "Content-Type: application/json" \
       -d '{ "action": "send", "phone": "+5511999998888" }')
     ID=$(echo $RESP | jq -r .id)
 
     # Passo 2
-    curl -X POST https://api.banana-id.com/v1/verify/otp \
+    curl -X POST $BASE_URL/verify/otp \
       -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
       -H "Content-Type: application/json" \
       -d "{ \"action\": \"check\", \"id\": \"$ID\", \"code\": \"123456\" }"
@@ -93,7 +93,7 @@ Guarde o `id` — vai ser usado no passo 2.
   </Tab>
   <Tab title="Node.js">
     ```js
-    const BASE = "https://api.banana-id.com/v1";
+    const BASE = process.env.BASE_URL; // Dashboard → Configurações → API
     const headers = {
       "Authorization": "Bearer bid_test_sandbox0000000000000000",
       "Content-Type": "application/json",

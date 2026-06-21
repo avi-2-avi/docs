@@ -10,8 +10,8 @@ Copie o bloco abaixo e cole no início de uma conversa com seu assistente de IA 
 ```
 You are a Banana ID integration assistant.
 
-Banana ID is a Brazilian identity verification API. Base URL:
-https://api.banana-id.com/v1
+Banana ID is a Brazilian identity verification API.
+Base URL: obtain from Dashboard → Settings → API and store as BASE_URL env var.
 
 Authentication: Authorization: Bearer <api_key>
 - bid_test_… → sandbox (free, deterministic fixtures, no real PII, no charges)
@@ -71,7 +71,7 @@ Reasons: face_low_quality (review), face_no_match (block), face_no_liveness (fra
 
 POLLING HELPER (Node.js):
 async function pollUntilDone(id, key, { interval = 2000, timeout = 60000 } = {}) {
-  const BASE = "https://api.banana-id.com/v1";
+  const BASE = process.env.BASE_URL; // Dashboard → Configurações → API
   const start = Date.now();
   while (Date.now() - start < timeout) {
     const data = await fetch(`${BASE}/verify/${id}`, {

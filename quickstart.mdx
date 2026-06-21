@@ -7,7 +7,13 @@ description: "Do zero à primeira verificação em menos de 5 minutos."
 
 [Crie uma conta gratuita](https://banana-id.lovable.app/signup). Você cai direto no sandbox — grátis, ilimitado, sem cartão de crédito.
 
-## 2. Pegue sua chave de teste
+## 2. Pegue suas credenciais
+
+No [Dashboard → Configurações → API](https://banana-id.lovable.app/app/settings), copie sua **Base URL** e guarde como variável de ambiente:
+
+```bash
+BASE_URL=https://…   # sua Base URL — copie do Dashboard
+```
 
 No [Dashboard → Chaves de API](https://banana-id.lovable.app/app/keys), copie sua chave `bid_test_…`. Ela fica no header de todas as chamadas:
 
@@ -20,7 +26,7 @@ Authorization: Bearer bid_test_sua_chave_aqui
 <Tabs>
   <Tab title="CPF (sync)">
     ```bash
-    curl -X POST https://api.banana-id.com/v1/verify/cpf \
+    curl -X POST $BASE_URL/verify/cpf \
       -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
       -H "Content-Type: application/json" \
       -d '{ "cpf": "390.533.447-05" }'
@@ -43,7 +49,7 @@ Authorization: Bearer bid_test_sua_chave_aqui
   <Tab title="Node.js">
     ```js
     const res = await fetch(
-      "https://api.banana-id.com/v1/verify/cpf",
+      `${process.env.BASE_URL}/verify/cpf`,
       {
         method: "POST",
         headers: {
