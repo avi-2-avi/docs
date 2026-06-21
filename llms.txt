@@ -24,7 +24,7 @@ Keys are generated at https://banana-id.lovable.app/app/keys
 ## Base URL
 
 ```
-https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1
+https://api.banana-id.com/v1
 ```
 
 ---
@@ -168,7 +168,7 @@ Reasons:
 
 ```js
 async function pollUntilDone(id, { interval = 2000, timeout = 60000 } = {}) {
-  const BASE = "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1";
+  const BASE = "https://api.banana-id.com/v1";
   const start = Date.now();
   while (Date.now() - start < timeout) {
     const res = await fetch(`${BASE}/verify/${id}`, {

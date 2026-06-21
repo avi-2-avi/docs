@@ -54,7 +54,7 @@ O campo `cpf` aceita qualquer formato (`390.533.447-05`, `39053344705`) ou um [f
 <Tabs>
   <Tab title="curl">
     ```bash
-    curl -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/cpf \
+    curl -X POST https://api.banana-id.com/v1/verify/cpf \
       -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
       -H "Content-Type: application/json" \
       -d '{ "cpf": "test_cpf_inactive" }'
@@ -63,7 +63,7 @@ O campo `cpf` aceita qualquer formato (`390.533.447-05`, `39053344705`) ou um [f
   <Tab title="Node.js">
     ```js
     const res = await fetch(
-      "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/cpf",
+      "https://api.banana-id.com/v1/verify/cpf",
       {
         method: "POST",
         headers: {

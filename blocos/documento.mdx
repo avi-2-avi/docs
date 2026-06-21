@@ -19,7 +19,7 @@ GET  /v1/verify/:id
 ### Passo 1 — criar a verificação
 
 ```bash
-curl -X POST https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/document \
+curl -X POST https://api.banana-id.com/v1/verify/document \
   -H "Authorization: Bearer bid_test_sandbox0000000000000000" \
   -H "Content-Type: application/json" \
   -d '{ "fixture": "test_doc_blurry" }'
@@ -58,7 +58,7 @@ O arquivo vai **direto a um bucket privado** — sem passar pela Edge Function. 
 ### Passo 3 — polling até o resultado
 
 ```bash
-curl https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1/verify/ver_3d77e0a1 \
+curl https://api.banana-id.com/v1/verify/ver_3d77e0a1 \
   -H "Authorization: Bearer bid_test_sandbox0000000000000000"
 ```
 
@@ -96,7 +96,7 @@ O `evidence_url` é uma URL assinada (GET, expira em ~5 min) para visualizar o a
 ## Exemplo Node.js completo
 
 ```js
-const BASE = "https://zjuftegykhuempxnkikx.supabase.co/functions/v1/v1";
+const BASE = "https://api.banana-id.com/v1";
 const KEY  = "bid_test_sandbox0000000000000000";
 const headers = { "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json" };
 
